@@ -49,7 +49,15 @@ function formatDate(d) {
 /* 履歴 */
 async function fetchRecords() {
   const res = await fetch(`${GAS_URL}?userId=${userId.value}`)
-  records.value = await res.json()
+  const data = await res.json()
+
+  const now = new Date()
+
+  records.value = data.filter(r => {
+    const d = new Date(r.date)
+    const diff = (now - d) / (1000 * 60 * 60 * 24)
+    return diff <= 30
+  })
 }
 
 /* 送信 */
