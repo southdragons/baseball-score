@@ -21,7 +21,7 @@ function update(e) {
 </template>
 
 <style scoped>
-.card { margin-bottom: 12px; }
+.card { margin-bottom: 25px; }
 .input {
   width: 100%;
   height: 25%;
