@@ -2,7 +2,6 @@
 import { ref, onMounted } from 'vue'
 import DatePicker from '../components/DatePicker.vue'
 import MemberForm from '../components/MemberForm.vue'
-import HistoryList from '../components/HistoryList.vue'
 import SubmitBar from '../components/SubmitBar.vue'
 
 const GAS_URL = 'https://script.google.com/macros/s/AKfycbwDO9vI4vece_1h5s-IYPopKXW7c8I7_gNIQzhUf7z6nJrLN2dBlFiabj7ULaLh7HDd/exec'
@@ -11,7 +10,6 @@ const userId = ref('')
 const members = ref([{ id: Date.now(), name: '', status: null }])
 const selectedDate = ref(new Date())
 const records = ref([])
-const toast = ref('')
 const loading = ref(false)
 
 /* userId */
@@ -47,18 +45,6 @@ function formatDate(d) {
 }
 
 /* 履歴 */
-async function fetchRecords() {
-  const res = await fetch(`${GAS_URL}?userId=${userId.value}`)
-  const data = await res.json()
-
-  const now = new Date()
-
-  records.value = data.filter(r => {
-    const d = new Date(r.date)
-    const diff = (now - d) / (1000 * 60 * 60 * 24)
-    return diff <= 30
-  })
-}
 
 /* 送信 */
 async function submit() {
@@ -98,19 +84,9 @@ async function submit() {
   loading.value = false  // ★追加
 }
 
-/* 削除 */
-async function deleteRecord(id) {
-  await fetch(GAS_URL, {
-    method: 'POST',
-    body: JSON.stringify({ type: 'delete', id })
-  })
-  fetchRecords()
-}
-
 /* 初期化 */
 onMounted(() => {
   initUserId()
-  fetchRecords()
 })
 </script>
 
@@ -132,11 +108,12 @@ onMounted(() => {
       @update="updateMember"
       @remove="removeMember"
     />
-
-    <HistoryList
-      :records="records"
-      @delete="deleteRecord"
-    />
+    <router-link
+      to="/history"
+      class="btn btn-outline w-full mt-4"
+    >
+      📄 履歴を見る
+    </router-link>
 
     <SubmitBar
       :loading="loading"
