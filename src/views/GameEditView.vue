@@ -10,7 +10,9 @@ const editGameModal = ref(false)
 const editOpponent = ref('')
 const editLocation = ref('')
 const editDate = ref('')
+const editBatFirst = ref('our')
 const orders = ref([])
+const allPlayers = ref([])
 const innings = ref([])
 const atBats = ref([])
 const steals = ref([])
@@ -38,12 +40,13 @@ const results = [
 async function fetchData() {
   loading.value = true
 
-  const [gameRes, ordersRes, inningsRes, atBatsRes, stealsRes] = await Promise.all([
+  const [gameRes, ordersRes, inningsRes, atBatsRes, stealsRes, playersRes] = await Promise.all([
     supabase.from('games').select('*').eq('id', route.params.id).single(),
     supabase.from('orders').select('*, players(name, player_code)').eq('game_id', route.params.id).order('batting_order'),
     supabase.from('innings').select('*').eq('game_id', route.params.id).order('inning'),
     supabase.from('at_bats').select('*, players(name)').eq('game_id', route.params.id).order('created_at', { ascending: false }),
-    supabase.from('steals').select('*, players(name)').eq('game_id', route.params.id).order('created_at', { ascending: false })
+    supabase.from('steals').select('*, players(name)').eq('game_id', route.params.id).order('created_at', { ascending: false }),
+    supabase.from('players').select('*').eq('status', 'active').order('player_code')
   ])
 
   if (!gameRes.error) game.value = gameRes.data
@@ -51,14 +54,22 @@ async function fetchData() {
   if (!inningsRes.error) innings.value = inningsRes.data || []
   if (!atBatsRes.error) atBats.value = atBatsRes.data || []
   if (!stealsRes.error) steals.value = stealsRes.data || []
+  if (!playersRes.error) allPlayers.value = playersRes.data || []
 
   loading.value = false
 }
+
+// オーダー外の選手（途中出場用）
+const subPlayers = computed(() => {
+  const orderPlayerIds = orders.value.map(o => o.player_id)
+  return allPlayers.value.filter(p => !orderPlayerIds.includes(p.id))
+})
 
 function openEditGame() {
   editOpponent.value = game.value.opponent
   editLocation.value = game.value.location || ''
   editDate.value = game.value.game_date
+  editBatFirst.value = game.value.bat_first || 'our'
   editGameModal.value = true
 }
 
@@ -68,19 +79,29 @@ async function saveGame() {
     .update({
       opponent: editOpponent.value,
       location: editLocation.value || null,
-      game_date: editDate.value
+      game_date: editDate.value,
+      bat_first: editBatFirst.value
     })
     .eq('id', route.params.id)
   if (!error) {
     toast.value = '更新しました'
     setTimeout(() => toast.value = '', 3000)
     editGameModal.value = false
-    fetchData()
+    await fetchData()
+  } else {
+    toast.value = 'エラーが発生しました'
+    setTimeout(() => toast.value = '', 3000)
   }
 }
+
+// 先攻・後攻ラベル
+const batFirstLabel = computed(() => {
+  return game.value?.bat_first === 'our' ? '先攻' : '後攻'
+})
+
 // イニングスコア取得
 function getInning(n) {
-  return innings.value.find(i => i.inning === n) || { our_score: 0, opponent_score: 0 }
+  return innings.value.find(i => i.inning === n) || { our_score: null, opponent_score: null }
 }
 
 // 合計スコア
@@ -165,7 +186,10 @@ onMounted(fetchData)
           <div class="flex justify-between items-center">
             <div>
               <div class="font-bold text-xl">vs {{ game?.opponent }}</div>
-              <div class="text-sm opacity-80">{{ game?.game_date }} {{ game?.location }}</div>
+              <div class="text-sm opacity-80">
+                {{ game?.game_date }} {{ game?.location }}
+                <span class="ml-2 badge badge-outline badge-sm">{{ batFirstLabel }}</span>
+              </div>
             </div>
             <button class="btn btn-sm btn-outline btn-white" @click="openEditGame">編集</button>
           </div>
@@ -189,6 +213,25 @@ onMounted(fetchData)
               <label class="text-sm font-bold mb-1 block">会場</label>
               <input v-model="editLocation" class="input w-full border-2 border-gray-400" />
             </div>
+            <div>
+              <label class="text-sm font-bold mb-1 block">先攻・後攻</label>
+              <div class="flex gap-2">
+                <button
+                  class="btn flex-1"
+                  :class="editBatFirst === 'our' ? 'btn-primary' : 'btn-outline'"
+                  @click="editBatFirst = 'our'"
+                >
+                  先攻
+                </button>
+                <button
+                  class="btn flex-1"
+                  :class="editBatFirst === 'opponent' ? 'btn-primary' : 'btn-outline'"
+                  @click="editBatFirst = 'opponent'"
+                >
+                  後攻
+                </button>
+              </div>
+            </div>
           </div>
           <div class="flex gap-2 mt-4">
             <button class="btn btn-outline flex-1" @click="editGameModal = false">キャンセル</button>
@@ -196,6 +239,7 @@ onMounted(fetchData)
           </div>
         </div>
       </div>
+
       <!-- スコアボード -->
       <div class="card bg-base-100 shadow border border-gray-200">
         <div class="card-body py-3">
@@ -210,31 +254,43 @@ onMounted(fetchData)
                 </tr>
               </thead>
               <tbody>
+                <!-- 先攻チーム -->
                 <tr>
-                  <td class="font-bold">我々</td>
+                  <td class="font-bold text-xs whitespace-nowrap">
+                    {{ game?.bat_first === 'our' ? 'SD' : game?.opponent }}<br>
+                    <span class="badge badge-xs badge-primary">先攻</span>
+                  </td>
                   <td v-for="n in 7" :key="n">
                     <input
                       type="number"
-                      :value="getInning(n).our_score"
-                      @change="updateInningScore(n, 'our_score', $event.target.value)"
+                      :value="game?.bat_first === 'our' ? (getInning(n).our_score ?? '') : (getInning(n).opponent_score ?? '')"
+                      @focus="$event.target.select()"
+                      @change="updateInningScore(n, game?.bat_first === 'our' ? 'our_score' : 'opponent_score', $event.target.value)"
                       class="w-8 text-center border rounded"
                       min="0"
+                      placeholder="-"
                     />
                   </td>
-                  <td class="font-bold text-primary">{{ totalOur }}</td>
+                  <td class="font-bold text-primary">{{ game?.bat_first === 'our' ? totalOur : totalOpponent }}</td>
                 </tr>
+                <!-- 後攻チーム -->
                 <tr>
-                  <td class="font-bold">相手</td>
+                  <td class="font-bold text-xs whitespace-nowrap">
+                    {{ game?.bat_first === 'our' ? game?.opponent : 'SD' }}<br>
+                    <span class="badge badge-xs badge-ghost">後攻</span>
+                  </td>
                   <td v-for="n in 7" :key="n">
                     <input
                       type="number"
-                      :value="getInning(n).opponent_score"
-                      @change="updateInningScore(n, 'opponent_score', $event.target.value)"
+                      :value="game?.bat_first === 'our' ? (getInning(n).opponent_score ?? '') : (getInning(n).our_score ?? '')"
+                      @focus="$event.target.select()"
+                      @change="updateInningScore(n, game?.bat_first === 'our' ? 'opponent_score' : 'our_score', $event.target.value)"
                       class="w-8 text-center border rounded"
                       min="0"
+                      placeholder="-"
                     />
                   </td>
-                  <td class="font-bold text-error">{{ totalOpponent }}</td>
+                  <td class="font-bold text-error">{{ game?.bat_first === 'our' ? totalOpponent : totalOur }}</td>
                 </tr>
               </tbody>
             </table>
@@ -258,9 +314,16 @@ onMounted(fetchData)
             <label class="text-sm font-bold mb-1 block">打者</label>
             <select v-model="selectedPlayer" class="select select-bordered w-full">
               <option value="">選手を選択</option>
-              <option v-for="o in orders" :key="o.player_id" :value="o.player_id">
-                {{ o.batting_order }}番 {{ o.players?.name }}
-              </option>
+              <optgroup label="オーダー">
+                <option v-for="o in orders" :key="o.player_id" :value="o.player_id">
+                  {{ o.batting_order }}番 {{ o.players?.name }}
+                </option>
+              </optgroup>
+              <optgroup label="途中出場" v-if="subPlayers.length">
+                <option v-for="p in subPlayers" :key="p.id" :value="p.id">
+                  {{ p.player_code }} {{ p.name }}（{{ p.grade }}年）
+                </option>
+              </optgroup>
             </select>
           </div>
 

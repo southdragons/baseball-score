@@ -73,7 +73,7 @@ onMounted(fetchGames)
     <div class="text-center mb-6">
       <div class="text-4xl mb-2">⚾</div>
       <h1 class="text-2xl font-bold">試合情報</h1>
-      <p class="text-gray-500 text-sm mt-1">サウスドラゴンズ</p>
+      <p class="text-gray-500 text-sm mt-1">サウスドラゴンズJ.B.C.</p>
     </div>
 
     <div class="grid grid-cols-3 gap-2 mb-4">

@@ -91,7 +91,7 @@ onMounted(fetchData)
               </div>
               <div>
                 <div class="font-bold text-warning text-sm">{{ p.hr }}</div>
-                <div class="text-xs text-gray-400">HR</div>
+                <div class="text-xs text-gray-400">本塁打</div>
               </div>
               <div>
                 <div class="font-bold text-info text-sm">{{ p.steals }}</div>

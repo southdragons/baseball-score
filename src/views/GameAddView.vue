@@ -7,6 +7,7 @@ const router = useRouter()
 const gameDate = ref('')
 const opponent = ref('')
 const location = ref('')
+const batFirst = ref('our')
 const loading = ref(false)
 const season = ref(new Date().getFullYear())
 const toast = ref('')
@@ -31,7 +32,8 @@ async function submit() {
       opponent: opponent.value,
       location: location.value || null,
       status: 'upcoming',
-      season: season.value
+      season: season.value,
+      bat_first: batFirst.value
     })
     if (error) throw error
     router.push('/admin')
@@ -81,6 +83,26 @@ gameDate.value = formatDate(new Date())
             placeholder="例：○○グラウンド"
             class="input w-full border-2 border-gray-400 focus:border-primary"
           />
+        </div>
+
+        <div>
+          <label class="text-sm font-bold mb-1 block">先攻・後攻</label>
+          <div class="flex gap-2">
+            <button
+              class="btn flex-1"
+              :class="batFirst === 'our' ? 'btn-primary' : 'btn-outline'"
+              @click="batFirst = 'our'"
+            >
+              先攻
+            </button>
+            <button
+              class="btn flex-1"
+              :class="batFirst === 'opponent' ? 'btn-primary' : 'btn-outline'"
+              @click="batFirst = 'opponent'"
+            >
+              後攻
+            </button>
+          </div>
         </div>
 
         <button

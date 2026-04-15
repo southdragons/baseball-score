@@ -121,7 +121,7 @@ onUnmounted(() => {
               </thead>
               <tbody>
                 <tr>
-                  <td class="font-bold text-xs">我々</td>
+                  <td class="font-bold text-xs">SD</td>
                   <td v-for="n in 7" :key="n" class="font-bold">
                     {{ getInning(n).our_score ?? '-' }}
                   </td>
@@ -153,7 +153,7 @@ onUnmounted(() => {
                   <th>打数</th>
                   <th>安打</th>
                   <th>打点</th>
-                  <th>HR</th>
+                  <th>本塁打</th>
                   <th>盗塁</th>
                   <th>打率</th>
                 </tr>

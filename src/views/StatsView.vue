@@ -73,7 +73,7 @@ onMounted(fetchData)
     <div class="mb-4">
       <div class="relative flex items-center justify-center mb-2">
         <router-link to="/" class="btn btn-sm btn-ghost absolute left-0">←</router-link>
-        <h1 class="text-2xl font-bold">⚾ サウスドラゴンズ</h1>
+        <h1 class="text-2xl font-bold">⚾ サウスドラゴンズJ.B.C.</h1>
       </div>
       <h3 class="text-base text-gray-600 font-bold mb-2 text-center">🏆 今シーズンの成績</h3>
       <select v-model="currentSeason" class="select select-bordered select-sm w-full text-center">
@@ -136,7 +136,7 @@ onMounted(fetchData)
       <!-- HRランキング -->
       <div class="card bg-base-100 shadow border border-gray-200">
         <div class="card-body">
-          <h2 class="font-bold text-lg mb-3">🏠 ホームランランキング</h2>
+          <h2 class="font-bold text-lg mb-3">🏠 本塁打ランキング</h2>
           <div v-if="!hrRanking.length" class="text-gray-500 text-sm">データなし</div>
           <div v-for="(p, i) in hrRanking" :key="p.id" class="flex items-center gap-3 py-2 border-b last:border-0">
             <div class="text-2xl w-8 text-center">{{ i === 0 ? '👑' : i === 1 ? '🥈' : '🥉' }}</div>

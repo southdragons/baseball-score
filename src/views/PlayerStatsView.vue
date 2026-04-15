@@ -101,7 +101,7 @@ onMounted(fetchData)
             </div>
             <div class="bg-gray-50 rounded-lg p-2">
               <div class="text-2xl font-bold text-warning">{{ stats.hr }}</div>
-              <div class="text-xs text-gray-500">HR</div>
+              <div class="text-xs text-gray-500">本塁打</div>
             </div>
             <div class="bg-gray-50 rounded-lg p-2">
               <div class="text-2xl font-bold text-error">{{ stats.rbi }}</div>
