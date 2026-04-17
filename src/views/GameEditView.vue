@@ -28,7 +28,7 @@ const results = [
   { label: '安打', value: 'ヒット', class: 'btn-success' },
   { label: '二塁打', value: '2塁打', class: 'btn-success' },
   { label: '三塁打', value: '3塁打', class: 'btn-success' },
-  { label: 'HR', value: 'ホームラン', class: 'btn-warning' },
+  { label: '本塁打', value: '本塁打', class: 'btn-warning' },
   { label: '三振', value: '三振', class: 'btn-error' },
   { label: 'ゴロ', value: 'ゴロ', class: 'btn-error' },
   { label: 'フライ', value: 'フライ', class: 'btn-error' },
