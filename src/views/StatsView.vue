@@ -125,7 +125,7 @@ onMounted(fetchData)
                 {{ p.grade }}年生
                 <span v-if="p.doubles"> / 二塁打{{ p.doubles }}</span>
                 <span v-if="p.triples"> / 三塁打{{ p.triples }}</span>
-                <span v-if="p.hr"> / HR{{ p.hr }}</span>
+                <span v-if="p.hr"> / 本塁打{{ p.hr }}</span>
               </div>
             </div>
             <div class="text-2xl font-bold" :class="i === 0 ? 'text-yellow-500' : 'text-primary'">{{ p.hits }}<span class="text-sm font-normal text-gray-500">本</span></div>
