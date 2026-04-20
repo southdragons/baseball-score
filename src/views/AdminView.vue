@@ -6,6 +6,9 @@ import { useRouter } from 'vue-router'
 const router = useRouter()
 const games = ref([])
 const loading = ref(true)
+const showDeleteConfirm = ref(false)
+const deleteTargetId = ref(null)
+const deleteTargetName = ref('')
 
 async function fetchGames() {
   loading.value = true
@@ -29,9 +32,29 @@ async function updateStatus(id, status) {
   fetchGames()
 }
 
-async function deleteGame(id) {
-  await supabase.from('games').delete().eq('id', id)
-  fetchGames()
+function confirmDelete(id, opponent) {
+  deleteTargetId.value = id
+  deleteTargetName.value = opponent
+  showDeleteConfirm.value = true
+}
+
+async function deleteGame() {
+  const id = deleteTargetId.value
+
+  // 関連データを先に削除
+  await supabase.from('innings').delete().eq('game_id', id)
+  await supabase.from('at_bats').delete().eq('game_id', id)
+  await supabase.from('steals').delete().eq('game_id', id)
+  await supabase.from('orders').delete().eq('game_id', id)
+
+  // 試合を削除
+  const { error } = await supabase.from('games').delete().eq('id', id)
+
+  showDeleteConfirm.value = false
+  deleteTargetId.value = null
+  deleteTargetName.value = ''
+
+  if (!error) fetchGames()
 }
 
 onMounted(fetchGames)
@@ -92,7 +115,7 @@ onMounted(fetchGames)
             </select>
             <button
               class="btn btn-sm btn-outline btn-error"
-              @click="deleteGame(g.id)"
+              @click="confirmDelete(g.id, g.opponent)"
             >
               削除
             </button>
@@ -100,5 +123,23 @@ onMounted(fetchGames)
         </div>
       </div>
     </div>
+
+    <!-- 削除確認モーダル -->
+    <div v-if="showDeleteConfirm" class="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+      <div class="bg-white p-6 rounded-xl w-72">
+        <h2 class="font-bold text-lg mb-2">🗑️ 試合を削除しますか？</h2>
+        <p class="text-sm text-gray-500 mb-2">
+          <span class="font-bold text-error">vs {{ deleteTargetName }}</span>
+        </p>
+        <p class="text-sm text-gray-500 mb-4">
+          この試合に関連するスコア・打席記録・盗塁記録・オーダーも全て削除されます。この操作は取り消せません。
+        </p>
+        <div class="flex gap-2">
+          <button class="btn btn-outline flex-1" @click="showDeleteConfirm = false">キャンセル</button>
+          <button class="btn btn-error flex-1" @click="deleteGame">削除</button>
+        </div>
+      </div>
+    </div>
+
   </div>
 </template>
