@@ -30,13 +30,18 @@ async function fetchData() {
   loading.value = false
 }
 
-// 合計スコア
-const totalOur = computed(() => innings.value.reduce((s, i) => s + (i.our_score || 0), 0))
-const totalOpponent = computed(() => innings.value.reduce((s, i) => s + (i.opponent_score || 0), 0))
+// 合計スコア（X含む場合は数字部分のみ集計）
+const totalOur = computed(() => innings.value.reduce((s, i) => s + (parseInt(i.our_score) || 0), 0))
+const totalOpponent = computed(() => innings.value.reduce((s, i) => s + (parseInt(i.opponent_score) || 0), 0))
 
 function getInning(n) {
   return innings.value.find(i => i.inning === n) || { our_score: '-', opponent_score: '-' }
 }
+
+// 先攻・後攻ラベル
+const batFirstLabel = computed(() => {
+  return game.value?.bat_first === 'our' ? '先攻' : '後攻'
+})
 
 // 選手別打席成績
 const playerStats = computed(() => {
@@ -101,8 +106,11 @@ onUnmounted(() => {
         <div class="card-body py-3">
           <div class="font-bold text-xl">vs {{ game?.opponent }}</div>
           <div class="text-sm opacity-80">{{ game?.game_date }} {{ game?.location }}</div>
-          <div class="badge badge-outline mt-1">
-            {{ game?.status === 'in_progress' ? '⚾ 試合中' : game?.status === 'finished' ? '✅ 試合終了' : '⏳ 試合前' }}
+          <div class="flex gap-2 mt-1">
+            <div class="badge badge-outline">
+              {{ game?.status === 'in_progress' ? '⚾ 試合中' : game?.status === 'finished' ? '✅ 試合終了' : '⏳ 試合前' }}
+            </div>
+            <div class="badge badge-outline">{{ batFirstLabel }}</div>
           </div>
         </div>
       </div>
@@ -121,18 +129,24 @@ onUnmounted(() => {
               </thead>
               <tbody>
                 <tr>
-                  <td class="font-bold text-xs">SD</td>
-                  <td v-for="n in 7" :key="n" class="font-bold">
-                    {{ getInning(n).our_score ?? '-' }}
+                  <td class="font-bold text-xs whitespace-nowrap">
+                    {{ game?.bat_first === 'our' ? 'SD' : game?.opponent }}<br>
+                    <span class="badge badge-xs badge-primary">先攻</span>
                   </td>
-                  <td class="font-bold text-primary text-lg">{{ totalOur }}</td>
+                  <td v-for="n in 7" :key="n" class="font-bold">
+                    {{ game?.bat_first === 'our' ? (getInning(n).our_score ?? '-') : (getInning(n).opponent_score ?? '-') }}
+                  </td>
+                  <td class="font-bold text-primary text-lg">{{ game?.bat_first === 'our' ? totalOur : totalOpponent }}</td>
                 </tr>
                 <tr>
-                  <td class="font-bold text-xs">相手</td>
-                  <td v-for="n in 7" :key="n">
-                    {{ getInning(n).opponent_score ?? '-' }}
+                  <td class="font-bold text-xs whitespace-nowrap">
+                    {{ game?.bat_first === 'our' ? game?.opponent : 'SD' }}<br>
+                    <span class="badge badge-xs badge-ghost">後攻</span>
                   </td>
-                  <td class="font-bold text-error text-lg">{{ totalOpponent }}</td>
+                  <td v-for="n in 7" :key="n">
+                    {{ game?.bat_first === 'our' ? (getInning(n).opponent_score ?? '-') : (getInning(n).our_score ?? '-') }}
+                  </td>
+                  <td class="font-bold text-error text-lg">{{ game?.bat_first === 'our' ? totalOpponent : totalOur }}</td>
                 </tr>
               </tbody>
             </table>

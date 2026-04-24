@@ -5,11 +5,12 @@ import { useRouter } from 'vue-router'
 
 const router = useRouter()
 const games = ref([])
+const scores = ref({})
 const loading = ref(true)
 const showPasswordModal = ref(false)
 const passwordInput = ref('')
 const passwordError = ref(false)
-const ADMIN_PASSWORD = 'admin' // ここでパスワード設定
+const ADMIN_PASSWORD = 'admin'
 
 function openAdmin() {
   const saved = localStorage.getItem('adminAuth')
@@ -47,8 +48,32 @@ async function fetchGames() {
     .select('*')
     .eq('game_date', today)
     .order('game_date', { ascending: true })
-  if (!error) games.value = data || []
+  if (!error) {
+    games.value = data || []
+    await fetchScores(data || [])
+  }
   loading.value = false
+}
+
+async function fetchScores(gameList) {
+  if (!gameList.length) return
+  const gameIds = gameList.map(g => g.id)
+  const { data } = await supabase
+    .from('innings')
+    .select('*')
+    .in('game_id', gameIds)
+
+  const scoreMap = {}
+  if (data) {
+    data.forEach(inning => {
+      if (!scoreMap[inning.game_id]) {
+        scoreMap[inning.game_id] = { our: 0, opponent: 0 }
+      }
+      scoreMap[inning.game_id].our += parseInt(inning.our_score) || 0
+      scoreMap[inning.game_id].opponent += parseInt(inning.opponent_score) || 0
+    })
+  }
+  scores.value = scoreMap
 }
 
 function statusLabel(status) {
@@ -83,7 +108,7 @@ onMounted(fetchGames)
       <router-link to="/past-games" class="btn btn-sm btn-outline opacity-90 hover:opacity-100">
         📅 過去の試合
       </router-link>
-      <button class="btn btn-sm btn-outline opacity-50 hover:opacity-100" @click="openAdmin">
+      <button class="btn btn-sm btn-outline" @click="openAdmin">
         ⚙️ 管理者
       </button>
     </div>
@@ -113,7 +138,7 @@ onMounted(fetchGames)
 
     <div v-else>
       <div v-if="!games.length" class="text-center text-gray-500 py-10">
-        試合が登録されていません
+        本日の試合はありません
       </div>
 
       <div
@@ -129,6 +154,21 @@ onMounted(fetchGames)
           </div>
           <div class="font-bold text-lg">vs {{ g.opponent }}</div>
           <div v-if="g.location" class="text-sm text-gray-500">📍 {{ g.location }}</div>
+
+          <!-- スコア表示 -->
+          <div v-if="scores[g.id]" class="flex items-center gap-3 mt-2 bg-gray-50 rounded-lg px-3 py-2">
+            <div class="flex-1 text-center">
+              <div class="text-xs text-gray-500">SD</div>
+              <div class="text-xs text-gray-400">{{ g.bat_first === 'our' ? '先攻' : '後攻' }}</div>
+              <div class="text-2xl font-bold text-primary">{{ scores[g.id].our }}</div>
+            </div>
+            <div class="text-gray-400 font-bold">-</div>
+            <div class="flex-1 text-center">
+              <div class="text-xs text-gray-500">{{ g.opponent }}</div>
+              <div class="text-xs text-gray-400">{{ g.bat_first === 'our' ? '後攻' : '先攻' }}</div>
+              <div class="text-2xl font-bold text-error">{{ scores[g.id].opponent }}</div>
+            </div>
+          </div>
         </div>
       </div>
     </div>

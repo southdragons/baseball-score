@@ -59,7 +59,6 @@ async function fetchData() {
   loading.value = false
 }
 
-// オーダー外の選手（途中出場用）
 const subPlayers = computed(() => {
   const orderPlayerIds = orders.value.map(o => o.player_id)
   return allPlayers.value.filter(p => !orderPlayerIds.includes(p.id))
@@ -94,36 +93,38 @@ async function saveGame() {
   }
 }
 
-// 先攻・後攻ラベル
 const batFirstLabel = computed(() => {
   return game.value?.bat_first === 'our' ? '先攻' : '後攻'
 })
 
-// イニングスコア取得
 function getInning(n) {
   return innings.value.find(i => i.inning === n) || { our_score: null, opponent_score: null }
 }
 
-// 合計スコア
-const totalOur = computed(() => innings.value.reduce((s, i) => s + (i.our_score || 0), 0))
-const totalOpponent = computed(() => innings.value.reduce((s, i) => s + (i.opponent_score || 0), 0))
+const totalOur = computed(() => innings.value.reduce((s, i) => {
+  const val = parseInt(i.our_score) || 0
+  return s + val
+}, 0))
 
-// イニングスコア更新
+const totalOpponent = computed(() => innings.value.reduce((s, i) => {
+  const val = parseInt(i.opponent_score) || 0
+  return s + val
+}, 0))
+
 async function updateInningScore(inning, field, value) {
   const existing = innings.value.find(i => i.inning === inning)
   if (existing) {
-    await supabase.from('innings').update({ [field]: parseInt(value) || 0 }).eq('id', existing.id)
+    await supabase.from('innings').update({ [field]: value }).eq('id', existing.id)
   } else {
     await supabase.from('innings').insert({
       game_id: route.params.id,
       inning,
-      [field]: parseInt(value) || 0
+      [field]: value
     })
   }
   fetchData()
 }
 
-// 打席記録追加
 async function addAtBat() {
   if (!selectedPlayer.value || !selectedResult.value) {
     toast.value = '選手と結果を選択してください'
@@ -146,7 +147,6 @@ async function addAtBat() {
   }
 }
 
-// 盗塁追加
 async function addSteal(playerId) {
   await supabase.from('steals').insert({
     game_id: route.params.id,
@@ -158,7 +158,6 @@ async function addSteal(playerId) {
   fetchData()
 }
 
-// 打席記録削除
 async function deleteAtBat(id) {
   await supabase.from('at_bats').delete().eq('id', id)
   fetchData()
@@ -220,16 +219,12 @@ onMounted(fetchData)
                   class="btn flex-1"
                   :class="editBatFirst === 'our' ? 'btn-primary' : 'btn-outline'"
                   @click="editBatFirst = 'our'"
-                >
-                  先攻
-                </button>
+                >先攻</button>
                 <button
                   class="btn flex-1"
                   :class="editBatFirst === 'opponent' ? 'btn-primary' : 'btn-outline'"
                   @click="editBatFirst = 'opponent'"
-                >
-                  後攻
-                </button>
+                >後攻</button>
               </div>
             </div>
           </div>
@@ -248,53 +243,52 @@ onMounted(fetchData)
             <table class="table table-xs text-center">
               <thead>
                 <tr>
-                  <th></th>
-                  <th v-for="n in 7" :key="n">{{ n }}</th>
-                  <th>計</th>
+                  <th class="text-xs w-10"></th>
+                  <th v-for="n in 7" :key="n" class="text-xs px-1">{{ n }}</th>
+                  <th class="text-xs px-1">計</th>
                 </tr>
               </thead>
               <tbody>
                 <!-- 先攻チーム -->
                 <tr>
-                  <td class="font-bold text-xs whitespace-nowrap">
-                    {{ game?.bat_first === 'our' ? 'SD' : game?.opponent }}<br>
+                  <td class="font-bold text-xs whitespace-nowrap w-10">
+                    {{ game?.bat_first === 'our' ? 'SD' : game?.opponent.slice(0,3) }}<br>
                     <span class="badge badge-xs badge-primary">先攻</span>
                   </td>
-                  <td v-for="n in 7" :key="n">
+                  <td v-for="n in 7" :key="n" class="px-0">
                     <input
-                      type="number"
+                      type="text"
                       :value="game?.bat_first === 'our' ? (getInning(n).our_score ?? '') : (getInning(n).opponent_score ?? '')"
                       @focus="$event.target.select()"
                       @change="updateInningScore(n, game?.bat_first === 'our' ? 'our_score' : 'opponent_score', $event.target.value)"
-                      class="w-8 text-center border rounded"
-                      min="0"
+                      class="w-7 text-center border rounded text-xs"
                       placeholder="-"
                     />
                   </td>
-                  <td class="font-bold text-primary">{{ game?.bat_first === 'our' ? totalOur : totalOpponent }}</td>
+                  <td class="font-bold text-primary text-xs">{{ game?.bat_first === 'our' ? totalOur : totalOpponent }}</td>
                 </tr>
                 <!-- 後攻チーム -->
                 <tr>
-                  <td class="font-bold text-xs whitespace-nowrap">
-                    {{ game?.bat_first === 'our' ? game?.opponent : 'SD' }}<br>
+                  <td class="font-bold text-xs whitespace-nowrap w-10">
+                    {{ game?.bat_first === 'our' ? game?.opponent.slice(0,3) : 'SD' }}<br>
                     <span class="badge badge-xs badge-ghost">後攻</span>
                   </td>
-                  <td v-for="n in 7" :key="n">
+                  <td v-for="n in 7" :key="n" class="px-0">
                     <input
-                      type="number"
+                      type="text"
                       :value="game?.bat_first === 'our' ? (getInning(n).opponent_score ?? '') : (getInning(n).our_score ?? '')"
                       @focus="$event.target.select()"
                       @change="updateInningScore(n, game?.bat_first === 'our' ? 'opponent_score' : 'our_score', $event.target.value)"
-                      class="w-8 text-center border rounded"
-                      min="0"
+                      class="w-7 text-center border rounded text-xs"
                       placeholder="-"
                     />
                   </td>
-                  <td class="font-bold text-error">{{ game?.bat_first === 'our' ? totalOpponent : totalOur }}</td>
+                  <td class="font-bold text-error text-xs">{{ game?.bat_first === 'our' ? totalOpponent : totalOur }}</td>
                 </tr>
               </tbody>
             </table>
           </div>
+          <p class="text-xs text-gray-400 mt-2">※後攻の攻撃なしは X、さよならは 2X のように入力</p>
         </div>
       </div>
 
@@ -336,9 +330,7 @@ onMounted(fetchData)
                 class="btn btn-sm"
                 :class="selectedResult === r.value ? r.class : 'btn-outline'"
                 @click="selectedResult = r.value"
-              >
-                {{ r.label }}
-              </button>
+              >{{ r.label }}</button>
             </div>
           </div>
 
@@ -369,9 +361,7 @@ onMounted(fetchData)
               :key="o.player_id"
               class="btn btn-sm btn-outline"
               @click="addSteal(o.player_id)"
-            >
-              {{ o.players?.name }}
-            </button>
+            >{{ o.players?.name }}</button>
           </div>
         </div>
       </div>
