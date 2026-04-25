@@ -30,9 +30,9 @@ const playerStats = computed(() => {
   return players.value.map(p => {
     const playerAtBats = atBats.value.filter(ab => ab.player_id === p.id)
     const playerSteals = steals.value.filter(s => s.player_id === p.id)
-    const ab = playerAtBats.filter(ab => !['四球', '死球', '犠打'].includes(ab.result)).length
-    const hits = playerAtBats.filter(ab => ['ヒット', '2塁打', '3塁打', 'ホームラン'].includes(ab.result)).length
-    const hr = playerAtBats.filter(ab => ab.result === 'ホームラン').length
+    const ab = playerAtBats.filter(ab => !['四球', '死球', '犠打', '犠飛'].includes(ab.result.split('(')[0])).length
+    const hits = playerAtBats.filter(ab => ['ヒット', '2塁打', '3塁打', 'ホームラン'].includes(ab.result.split('(')[0])).length
+    const hr = playerAtBats.filter(ab => ab.result.split('(')[0] === 'ホームラン').length
     const rbi = playerAtBats.reduce((s, ab) => s + (ab.rbi || 0), 0)
     return {
       id: p.id,

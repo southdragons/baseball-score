@@ -22,20 +22,52 @@ const toast = ref('')
 const currentInning = ref(1)
 const selectedPlayer = ref('')
 const selectedResult = ref('')
+const selectedDirection = ref('')
 const rbi = ref(0)
+const stealPlayer = ref('')
+
+const showEditAtBatModal = ref(false)
+const editAtBat = ref(null)
+const editAtBatResult = ref('')
+const editAtBatDirection = ref('')
+const editAtBatRbi = ref(0)
 
 const results = [
-  { label: '安打', value: 'ヒット', class: 'btn-success' },
-  { label: '二塁打', value: '2塁打', class: 'btn-success' },
-  { label: '三塁打', value: '3塁打', class: 'btn-success' },
-  { label: '本塁打', value: '本塁打', class: 'btn-warning' },
-  { label: '三振', value: '三振', class: 'btn-error' },
-  { label: 'ゴロ', value: 'ゴロ', class: 'btn-error' },
-  { label: 'フライ', value: 'フライ', class: 'btn-error' },
-  { label: '四球', value: '四球', class: 'btn-info' },
-  { label: '死球', value: '死球', class: 'btn-info' },
-  { label: '犠打', value: '犠打', class: 'btn-ghost' },
+  { label: '安打', value: 'ヒット', class: 'btn-success', needsDirection: true },
+  { label: '二塁打', value: '2塁打', class: 'btn-success', needsDirection: true },
+  { label: '三塁打', value: '3塁打', class: 'btn-success', needsDirection: true },
+  { label: '本塁打', value: '本塁打', class: 'btn-warning', needsDirection: false },
+  { label: '三振', value: '三振', class: 'btn-error', needsDirection: false },
+  { label: 'ゴロ', value: 'ゴロ', class: 'btn-error', needsDirection: true },
+  { label: 'フライ', value: 'フライ', class: 'btn-error', needsDirection: true },
+  { label: '四球', value: '四球', class: 'btn-info', needsDirection: false },
+  { label: '死球', value: '死球', class: 'btn-info', needsDirection: false },
+  { label: '犠打', value: '犠打', class: 'btn-ghost', needsDirection: true },
+  { label: '犠飛', value: '犠飛', class: 'btn-ghost', needsDirection: true },
+  { label: '失策', value: '失策', class: 'btn-warning', needsDirection: true },
+  { label: 'FC', value: 'フィルダースチョイス', class: 'btn-warning', needsDirection: true },
+  { label: '併殺', value: '併殺打', class: 'btn-error', needsDirection: true },
 ]
+
+const directions = ['投', '捕', '一', '二', '三', '遊', '左', '中', '右']
+
+const needsDirection = computed(() => {
+  const r = results.find(r => r.value === selectedResult.value)
+  return r?.needsDirection || false
+})
+
+const needsDirectionEdit = computed(() => {
+  const r = results.find(r => r.value === editAtBatResult.value)
+  return r?.needsDirection || false
+})
+
+function buildResult(result, direction) {
+  const r = results.find(r => r.value === result)
+  if (r?.needsDirection && direction) {
+    return `${result}(${direction})`
+  }
+  return result
+}
 
 async function fetchData() {
   loading.value = true
@@ -44,7 +76,7 @@ async function fetchData() {
     supabase.from('games').select('*').eq('id', route.params.id).single(),
     supabase.from('orders').select('*, players(name, player_code)').eq('game_id', route.params.id).order('batting_order'),
     supabase.from('innings').select('*').eq('game_id', route.params.id).order('inning'),
-    supabase.from('at_bats').select('*, players(name)').eq('game_id', route.params.id).order('created_at', { ascending: false }),
+    supabase.from('at_bats').select('*, players(name)').eq('game_id', route.params.id).order('created_at', { ascending: true }),
     supabase.from('steals').select('*, players(name)').eq('game_id', route.params.id).order('created_at', { ascending: false }),
     supabase.from('players').select('*').eq('status', 'active').order('player_code')
   ])
@@ -62,6 +94,15 @@ async function fetchData() {
 const subPlayers = computed(() => {
   const orderPlayerIds = orders.value.map(o => o.player_id)
   return allPlayers.value.filter(p => !orderPlayerIds.includes(p.id))
+})
+
+const atBatsByInning = computed(() => {
+  const grouped = {}
+  for (let n = 1; n <= 7; n++) {
+    const records = atBats.value.filter(ab => ab.inning === n)
+    if (records.length) grouped[n] = records
+  }
+  return grouped
 })
 
 function openEditGame() {
@@ -131,18 +172,51 @@ async function addAtBat() {
     setTimeout(() => toast.value = '', 3000)
     return
   }
+  if (needsDirection.value && !selectedDirection.value) {
+    toast.value = '打球方向を選択してください'
+    setTimeout(() => toast.value = '', 3000)
+    return
+  }
+  const finalResult = buildResult(selectedResult.value, selectedDirection.value)
   const { error } = await supabase.from('at_bats').insert({
     game_id: route.params.id,
     player_id: selectedPlayer.value,
     inning: currentInning.value,
-    result: selectedResult.value,
+    result: finalResult,
     rbi: rbi.value
   })
   if (!error) {
     toast.value = '記録しました'
     setTimeout(() => toast.value = '', 2000)
     selectedResult.value = ''
+    selectedDirection.value = ''
     rbi.value = 0
+    fetchData()
+  }
+}
+
+function openEditAtBat(ab) {
+  editAtBat.value = ab
+  const match = ab.result.match(/^(.+?)(\((.+)\))?$/)
+  editAtBatResult.value = match ? match[1] : ab.result
+  editAtBatDirection.value = match && match[3] ? match[3] : ''
+  editAtBatRbi.value = ab.rbi || 0
+  showEditAtBatModal.value = true
+}
+
+async function saveEditAtBat() {
+  const finalResult = buildResult(editAtBatResult.value, editAtBatDirection.value)
+  const { error } = await supabase
+    .from('at_bats')
+    .update({
+      result: finalResult,
+      rbi: editAtBatRbi.value
+    })
+    .eq('id', editAtBat.value.id)
+  if (!error) {
+    toast.value = '更新しました'
+    setTimeout(() => toast.value = '', 3000)
+    showEditAtBatModal.value = false
     fetchData()
   }
 }
@@ -249,7 +323,6 @@ onMounted(fetchData)
                 </tr>
               </thead>
               <tbody>
-                <!-- 先攻チーム -->
                 <tr>
                   <td class="font-bold text-xs whitespace-nowrap w-10">
                     {{ game?.bat_first === 'our' ? 'SD' : game?.opponent.slice(0,3) }}<br>
@@ -267,7 +340,6 @@ onMounted(fetchData)
                   </td>
                   <td class="font-bold text-primary text-xs">{{ game?.bat_first === 'our' ? totalOur : totalOpponent }}</td>
                 </tr>
-                <!-- 後攻チーム -->
                 <tr>
                   <td class="font-bold text-xs whitespace-nowrap w-10">
                     {{ game?.bat_first === 'our' ? game?.opponent.slice(0,3) : 'SD' }}<br>
@@ -329,8 +401,22 @@ onMounted(fetchData)
                 :key="r.value"
                 class="btn btn-sm"
                 :class="selectedResult === r.value ? r.class : 'btn-outline'"
-                @click="selectedResult = r.value"
+                @click="selectedResult = r.value; selectedDirection = ''"
               >{{ r.label }}</button>
+            </div>
+          </div>
+
+          <!-- 打球方向 -->
+          <div v-if="needsDirection" class="mb-3">
+            <label class="text-sm font-bold mb-1 block">打球方向</label>
+            <div class="grid grid-cols-9 gap-1">
+              <button
+                v-for="d in directions"
+                :key="d"
+                class="btn btn-sm"
+                :class="selectedDirection === d ? 'btn-primary' : 'btn-outline'"
+                @click="selectedDirection = d"
+              >{{ d }}</button>
             </div>
           </div>
 
@@ -355,39 +441,104 @@ onMounted(fetchData)
       <div class="card bg-base-100 shadow border border-gray-200">
         <div class="card-body">
           <h2 class="font-bold mb-3">盗塁記録</h2>
-          <div class="grid grid-cols-3 gap-2">
+          <div class="flex gap-2">
+            <select v-model="stealPlayer" class="select select-bordered flex-1">
+              <option value="">選手を選択</option>
+              <optgroup label="オーダー">
+                <option v-for="o in orders" :key="o.player_id" :value="o.player_id">
+                  {{ o.batting_order }}番 {{ o.players?.name }}
+                </option>
+              </optgroup>
+              <optgroup label="代走・その他" v-if="subPlayers.length">
+                <option v-for="p in subPlayers" :key="p.id" :value="p.id">
+                  {{ p.player_code }} {{ p.name }}（{{ p.grade }}年）
+                </option>
+              </optgroup>
+            </select>
             <button
-              v-for="o in orders"
-              :key="o.player_id"
-              class="btn btn-sm btn-outline"
-              @click="addSteal(o.player_id)"
-            >{{ o.players?.name }}</button>
+              class="btn btn-primary"
+              :disabled="!stealPlayer"
+              @click="addSteal(stealPlayer); stealPlayer = ''"
+            >登録</button>
           </div>
         </div>
       </div>
 
-      <!-- 直近の打席記録 -->
+      <!-- 打席記録一覧（イニング別） -->
       <div v-if="atBats.length" class="card bg-base-100 shadow border border-gray-200">
         <div class="card-body">
-          <h2 class="font-bold mb-3">直近の記録</h2>
-          <div
-            v-for="ab in atBats.slice(0, 5)"
-            :key="ab.id"
-            class="flex items-center justify-between py-2 border-b last:border-0"
-          >
-            <div>
-              <span class="text-sm font-bold">{{ ab.players?.name }}</span>
-              <span class="text-xs text-gray-500 ml-2">{{ ab.inning }}回</span>
-            </div>
-            <div class="flex items-center gap-2">
-              <span class="badge badge-outline">{{ ab.result }}</span>
-              <span v-if="ab.rbi" class="text-xs text-primary">{{ ab.rbi }}打点</span>
-              <button class="btn btn-xs btn-outline btn-error" @click="deleteAtBat(ab.id)">削除</button>
+          <h2 class="font-bold mb-3">📋 打席記録</h2>
+          <div v-for="(records, inning) in atBatsByInning" :key="inning" class="mb-4">
+            <div class="text-sm font-bold text-gray-500 mb-2 bg-gray-50 px-2 py-1 rounded">{{ inning }}回</div>
+            <div
+              v-for="ab in records"
+              :key="ab.id"
+              class="flex items-center justify-between py-2 border-b last:border-0"
+            >
+              <div>
+                <span class="text-sm font-bold">{{ ab.players?.name }}</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="badge badge-outline text-xs">{{ ab.result }}</span>
+                <span v-if="ab.rbi" class="text-xs text-primary">{{ ab.rbi }}打点</span>
+                <button class="btn btn-xs btn-outline btn-info" @click="openEditAtBat(ab)">編集</button>
+                <button class="btn btn-xs btn-outline btn-error" @click="deleteAtBat(ab.id)">削除</button>
+              </div>
             </div>
           </div>
         </div>
       </div>
 
+    </div>
+
+    <!-- 打席記録編集モーダル -->
+    <div v-if="showEditAtBatModal" class="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+      <div class="bg-white p-6 rounded-xl w-80 max-h-screen overflow-y-auto">
+        <h2 class="font-bold text-lg mb-2">打席記録を編集</h2>
+        <p class="text-sm text-gray-500 mb-4">{{ editAtBat?.players?.name }} / {{ editAtBat?.inning }}回</p>
+
+        <div class="mb-3">
+          <label class="text-sm font-bold mb-1 block">結果</label>
+          <div class="grid grid-cols-5 gap-1">
+            <button
+              v-for="r in results"
+              :key="r.value"
+              class="btn btn-sm"
+              :class="editAtBatResult === r.value ? r.class : 'btn-outline'"
+              @click="editAtBatResult = r.value; editAtBatDirection = ''"
+            >{{ r.label }}</button>
+          </div>
+        </div>
+
+        <div v-if="needsDirectionEdit" class="mb-3">
+          <label class="text-sm font-bold mb-1 block">打球方向</label>
+          <div class="grid grid-cols-9 gap-1">
+            <button
+              v-for="d in directions"
+              :key="d"
+              class="btn btn-sm"
+              :class="editAtBatDirection === d ? 'btn-primary' : 'btn-outline'"
+              @click="editAtBatDirection = d"
+            >{{ d }}</button>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2 mb-4">
+          <label class="text-sm font-bold">打点</label>
+          <input
+            type="number"
+            v-model="editAtBatRbi"
+            min="0"
+            max="4"
+            class="input input-bordered w-20 text-center"
+          />
+        </div>
+
+        <div class="flex gap-2">
+          <button class="btn btn-outline flex-1" @click="showEditAtBatModal = false">キャンセル</button>
+          <button class="btn btn-primary flex-1" @click="saveEditAtBat">保存</button>
+        </div>
+      </div>
     </div>
 
     <div v-if="toast" class="toast toast-top toast-center z-50">

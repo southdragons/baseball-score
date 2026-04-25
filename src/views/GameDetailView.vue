@@ -30,7 +30,6 @@ async function fetchData() {
   loading.value = false
 }
 
-// 合計スコア（X含む場合は数字部分のみ集計）
 const totalOur = computed(() => innings.value.reduce((s, i) => s + (parseInt(i.our_score) || 0), 0))
 const totalOpponent = computed(() => innings.value.reduce((s, i) => s + (parseInt(i.opponent_score) || 0), 0))
 
@@ -38,37 +37,33 @@ function getInning(n) {
   return innings.value.find(i => i.inning === n) || { our_score: '-', opponent_score: '-' }
 }
 
-// 先攻・後攻ラベル
 const batFirstLabel = computed(() => {
   return game.value?.bat_first === 'our' ? '先攻' : '後攻'
 })
 
-// 選手別打席成績
 const playerStats = computed(() => {
   return orders.value.map(o => {
     const playerAtBats = atBats.value.filter(ab => ab.player_id === o.player_id)
     const playerSteals = steals.value.filter(s => s.player_id === o.player_id)
 
-    const hits = playerAtBats.filter(ab => ['ヒット', '2塁打', '3塁打', 'ホームラン'].includes(ab.result)).length
-    const hr = playerAtBats.filter(ab => ab.result === 'ホームラン').length
+    const pa = playerAtBats.length
+    const hits = playerAtBats.filter(ab => ['ヒット', '2塁打', '3塁打', 'ホームラン'].includes(ab.result.split('(')[0])).length
+    const hr = playerAtBats.filter(ab => ab.result.split('(')[0] === 'ホームラン').length
     const rbi = playerAtBats.reduce((s, ab) => s + (ab.rbi || 0), 0)
-    const ab = playerAtBats.filter(ab => !['四球', '死球', '犠打'].includes(ab.result)).length
+    const ab = playerAtBats.filter(ab => !['四球', '死球', '犠打', '犠飛'].includes(ab.result.split('(')[0])).length
+    const walks = playerAtBats.filter(ab => ab.result.split('(')[0] === '四球').length
+    const hbp = playerAtBats.filter(ab => ab.result.split('(')[0] === '死球').length
 
     return {
       name: o.players?.name,
       batting_order: o.batting_order,
-      position: o.position,
-      ab,
-      hits,
-      hr,
-      rbi,
+      pa, ab, hits, hr, rbi, walks, hbp,
       steals: playerSteals.length,
       avg: ab > 0 ? (hits / ab).toFixed(3) : '-'
     }
   })
 })
 
-// リアルタイム購読
 function subscribeRealtime() {
   subscription = supabase
     .channel('game-updates')
@@ -162,12 +157,15 @@ onUnmounted(() => {
             <table class="table table-xs text-center">
               <thead>
                 <tr>
-                  <th>打順</th>
-                  <th>名前</th>
+                  <th>#</th>
+                  <th class="text-left">名前</th>
+                  <th>打席</th>
                   <th>打数</th>
                   <th>安打</th>
                   <th>打点</th>
-                  <th>本塁打</th>
+                  <th>本塁</th>
+                  <th>四球</th>
+                  <th>死球</th>
                   <th>盗塁</th>
                   <th>打率</th>
                 </tr>
@@ -175,11 +173,14 @@ onUnmounted(() => {
               <tbody>
                 <tr v-for="p in playerStats" :key="p.batting_order">
                   <td>{{ p.batting_order }}</td>
-                  <td class="font-bold text-left">{{ p.name }}</td>
+                  <td class="font-bold text-left whitespace-nowrap">{{ p.name }}</td>
+                  <td>{{ p.pa }}</td>
                   <td>{{ p.ab }}</td>
                   <td class="text-success font-bold">{{ p.hits }}</td>
                   <td>{{ p.rbi }}</td>
                   <td class="text-warning font-bold">{{ p.hr || '-' }}</td>
+                  <td>{{ p.walks || '-' }}</td>
+                  <td>{{ p.hbp || '-' }}</td>
                   <td>{{ p.steals || '-' }}</td>
                   <td class="font-bold">{{ p.avg }}</td>
                 </tr>
@@ -189,12 +190,12 @@ onUnmounted(() => {
         </div>
       </div>
 
-      <!-- 直近の打席 -->
-      <div v-if="atBats.length" class="card bg-base-100 shadow border border-gray-200">
+      <!-- 打席履歴 -->
+      <div v-if="atBats.length && game?.status === 'in_progress'" class="card bg-base-100 shadow border border-gray-200">
         <div class="card-body py-3">
           <h2 class="font-bold mb-2">📋 打席履歴</h2>
           <div
-            v-for="ab in atBats.slice(0, 10)"
+            v-for="ab in atBats.slice(0, 3)"
             :key="ab.id"
             class="flex items-center justify-between py-2 border-b last:border-0"
           >

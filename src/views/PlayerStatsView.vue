@@ -23,13 +23,13 @@ async function fetchData() {
 }
 
 const stats = computed(() => {
-  const ab = atBats.value.filter(ab => !['四球', '死球', '犠打'].includes(ab.result)).length
-  const hits = atBats.value.filter(ab => ['ヒット', '2塁打', '3塁打', 'ホームラン'].includes(ab.result)).length
-  const doubles = atBats.value.filter(ab => ab.result === '2塁打').length
-  const triples = atBats.value.filter(ab => ab.result === '3塁打').length
-  const hr = atBats.value.filter(ab => ab.result === 'ホームラン').length
+  const ab = atBats.value.filter(ab => !['四球', '死球', '犠打', '犠飛'].includes(ab.result.split('(')[0])).length
+  const hits = atBats.value.filter(ab => ['ヒット', '2塁打', '3塁打', 'ホームラン'].includes(ab.result.split('(')[0])).length
+  const doubles = atBats.value.filter(ab => ab.result.split('(')[0] === '2塁打').length
+  const triples = atBats.value.filter(ab => ab.result.split('(')[0] === '3塁打').length
+  const hr = atBats.value.filter(ab => ab.result.split('(')[0] === 'ホームラン').length
   const rbi = atBats.value.reduce((s, ab) => s + (ab.rbi || 0), 0)
-  const walks = atBats.value.filter(ab => ['四球', '死球'].includes(ab.result)).length
+  const walks = atBats.value.filter(ab => ['四球', '死球'].includes(ab.result.split('(')[0])).length
 
   return {
     ab,
