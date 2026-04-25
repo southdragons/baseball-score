@@ -9,16 +9,18 @@ const orders = ref([])
 const innings = ref([])
 const atBats = ref([])
 const steals = ref([])
+const runs = ref([])
 const loading = ref(true)
 let subscription = null
 
 async function fetchData() {
-  const [gameRes, ordersRes, inningsRes, atBatsRes, stealsRes] = await Promise.all([
+  const [gameRes, ordersRes, inningsRes, atBatsRes, stealsRes, runsRes] = await Promise.all([
     supabase.from('games').select('*').eq('id', route.params.id).single(),
     supabase.from('orders').select('*, players(name, player_code)').eq('game_id', route.params.id).order('batting_order'),
     supabase.from('innings').select('*').eq('game_id', route.params.id).order('inning'),
     supabase.from('at_bats').select('*, players(name)').eq('game_id', route.params.id).order('created_at', { ascending: false }),
-    supabase.from('steals').select('*, players(name)').eq('game_id', route.params.id).order('created_at', { ascending: false })
+    supabase.from('steals').select('*, players(name)').eq('game_id', route.params.id).order('created_at', { ascending: false }),
+    supabase.from('runs').select('*, players(name)').eq('game_id', route.params.id).order('created_at', { ascending: false })
   ])
 
   if (!gameRes.error) game.value = gameRes.data
@@ -26,6 +28,7 @@ async function fetchData() {
   if (!inningsRes.error) innings.value = inningsRes.data || []
   if (!atBatsRes.error) atBats.value = atBatsRes.data || []
   if (!stealsRes.error) steals.value = stealsRes.data || []
+  if (!runsRes.error) runs.value = runsRes.data || []
 
   loading.value = false
 }
@@ -45,6 +48,7 @@ const playerStats = computed(() => {
   return orders.value.map(o => {
     const playerAtBats = atBats.value.filter(ab => ab.player_id === o.player_id)
     const playerSteals = steals.value.filter(s => s.player_id === o.player_id)
+    const playerRuns = runs.value.filter(r => r.player_id === o.player_id)
 
     const pa = playerAtBats.length
     const hits = playerAtBats.filter(ab => ['ヒット', '2塁打', '3塁打', 'ホームラン'].includes(ab.result.split('(')[0])).length
@@ -59,6 +63,7 @@ const playerStats = computed(() => {
       batting_order: o.batting_order,
       pa, ab, hits, hr, rbi, walks, hbp,
       steals: playerSteals.length,
+      runs: playerRuns.length,
       avg: ab > 0 ? (hits / ab).toFixed(3) : '-'
     }
   })
@@ -70,6 +75,7 @@ function subscribeRealtime() {
     .on('postgres_changes', { event: '*', schema: 'public', table: 'innings' }, fetchData)
     .on('postgres_changes', { event: '*', schema: 'public', table: 'at_bats' }, fetchData)
     .on('postgres_changes', { event: '*', schema: 'public', table: 'steals' }, fetchData)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'runs' }, fetchData)
     .subscribe()
 }
 
@@ -163,6 +169,7 @@ onUnmounted(() => {
                   <th>打数</th>
                   <th>安打</th>
                   <th>打点</th>
+                  <th>得点</th>
                   <th>本塁</th>
                   <th>四球</th>
                   <th>死球</th>
@@ -178,6 +185,7 @@ onUnmounted(() => {
                   <td>{{ p.ab }}</td>
                   <td class="text-success font-bold">{{ p.hits }}</td>
                   <td>{{ p.rbi }}</td>
+                  <td class="text-info font-bold">{{ p.runs || '-' }}</td>
                   <td class="text-warning font-bold">{{ p.hr || '-' }}</td>
                   <td>{{ p.walks || '-' }}</td>
                   <td>{{ p.hbp || '-' }}</td>
