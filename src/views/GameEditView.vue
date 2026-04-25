@@ -16,6 +16,7 @@ const allPlayers = ref([])
 const innings = ref([])
 const atBats = ref([])
 const steals = ref([])
+const runs = ref([])
 const loading = ref(true)
 const toast = ref('')
 
@@ -25,6 +26,7 @@ const selectedResult = ref('')
 const selectedDirection = ref('')
 const rbi = ref(0)
 const stealPlayer = ref('')
+const runPlayer = ref('')
 
 const showEditAtBatModal = ref(false)
 const editAtBat = ref(null)
@@ -72,12 +74,13 @@ function buildResult(result, direction) {
 async function fetchData() {
   loading.value = true
 
-  const [gameRes, ordersRes, inningsRes, atBatsRes, stealsRes, playersRes] = await Promise.all([
+  const [gameRes, ordersRes, inningsRes, atBatsRes, stealsRes, runsRes, playersRes] = await Promise.all([
     supabase.from('games').select('*').eq('id', route.params.id).single(),
     supabase.from('orders').select('*, players(name, player_code)').eq('game_id', route.params.id).order('batting_order'),
     supabase.from('innings').select('*').eq('game_id', route.params.id).order('inning'),
     supabase.from('at_bats').select('*, players(name)').eq('game_id', route.params.id).order('created_at', { ascending: true }),
     supabase.from('steals').select('*, players(name)').eq('game_id', route.params.id).order('created_at', { ascending: false }),
+    supabase.from('runs').select('*, players(name)').eq('game_id', route.params.id).order('created_at', { ascending: false }),
     supabase.from('players').select('*').eq('status', 'active').order('player_code')
   ])
 
@@ -86,6 +89,7 @@ async function fetchData() {
   if (!inningsRes.error) innings.value = inningsRes.data || []
   if (!atBatsRes.error) atBats.value = atBatsRes.data || []
   if (!stealsRes.error) steals.value = stealsRes.data || []
+  if (!runsRes.error) runs.value = runsRes.data || []
   if (!playersRes.error) allPlayers.value = playersRes.data || []
 
   loading.value = false
@@ -232,6 +236,17 @@ async function addSteal(playerId) {
   fetchData()
 }
 
+async function addRun(playerId) {
+  await supabase.from('runs').insert({
+    game_id: route.params.id,
+    player_id: playerId,
+    inning: currentInning.value
+  })
+  toast.value = '得点記録しました'
+  setTimeout(() => toast.value = '', 2000)
+  fetchData()
+}
+
 async function deleteAtBat(id) {
   await supabase.from('at_bats').delete().eq('id', id)
   fetchData()
@@ -370,8 +385,8 @@ onMounted(fetchData)
           <h2 class="font-bold mb-3">打席記録入力</h2>
 
           <div class="flex items-center gap-2 mb-3">
-            <label class="text-sm font-bold">イニング</label>
-            <select v-model="currentInning" class="select select-bordered select-sm">
+            <label class="text-sm font-bold whitespace-nowrap">イニング</label>
+            <select v-model="currentInning" class="select select-bordered select-sm flex-1">
               <option v-for="n in 7" :key="n" :value="n">{{ n }}回</option>
             </select>
           </div>
@@ -395,7 +410,7 @@ onMounted(fetchData)
 
           <div class="mb-3">
             <label class="text-sm font-bold mb-1 block">結果</label>
-            <div class="grid grid-cols-5 gap-1">
+            <div class="grid grid-cols-4 gap-1">
               <button
                 v-for="r in results"
                 :key="r.value"
@@ -421,7 +436,7 @@ onMounted(fetchData)
           </div>
 
           <div class="flex items-center gap-2 mb-3">
-            <label class="text-sm font-bold">打点</label>
+            <label class="text-sm font-bold whitespace-nowrap">打点</label>
             <input
               type="number"
               v-model="rbi"
@@ -464,6 +479,44 @@ onMounted(fetchData)
         </div>
       </div>
 
+      <!-- 得点記録 -->
+      <div class="card bg-base-100 shadow border border-gray-200">
+        <div class="card-body">
+          <h2 class="font-bold mb-3">得点記録</h2>
+          <div class="flex gap-2">
+            <select v-model="runPlayer" class="select select-bordered flex-1">
+              <option value="">選手を選択</option>
+              <optgroup label="オーダー">
+                <option v-for="o in orders" :key="o.player_id" :value="o.player_id">
+                  {{ o.batting_order }}番 {{ o.players?.name }}
+                </option>
+              </optgroup>
+              <optgroup label="代走・その他" v-if="subPlayers.length">
+                <option v-for="p in subPlayers" :key="p.id" :value="p.id">
+                  {{ p.player_code }} {{ p.name }}（{{ p.grade }}年）
+                </option>
+              </optgroup>
+            </select>
+            <button
+              class="btn btn-success"
+              :disabled="!runPlayer"
+              @click="addRun(runPlayer); runPlayer = ''"
+            >登録</button>
+          </div>
+          <!-- 得点履歴 -->
+          <div v-if="runs.length" class="mt-3">
+            <div
+              v-for="r in runs.slice(0, 5)"
+              :key="r.id"
+              class="flex items-center justify-between py-1 border-b last:border-0"
+            >
+              <span class="text-sm font-bold">{{ r.players?.name }}</span>
+              <span class="text-xs text-gray-500">{{ r.inning }}回 🏃得点</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- 打席記録一覧（イニング別） -->
       <div v-if="atBats.length" class="card bg-base-100 shadow border border-gray-200">
         <div class="card-body">
@@ -499,7 +552,7 @@ onMounted(fetchData)
 
         <div class="mb-3">
           <label class="text-sm font-bold mb-1 block">結果</label>
-          <div class="grid grid-cols-5 gap-1">
+          <div class="grid grid-cols-4 gap-1">
             <button
               v-for="r in results"
               :key="r.value"
@@ -524,7 +577,7 @@ onMounted(fetchData)
         </div>
 
         <div class="flex items-center gap-2 mb-4">
-          <label class="text-sm font-bold">打点</label>
+          <label class="text-sm font-bold whitespace-nowrap">打点</label>
           <input
             type="number"
             v-model="editAtBatRbi"
