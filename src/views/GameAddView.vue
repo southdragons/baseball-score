@@ -1,5 +1,5 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import { supabase } from '../lib/supabase'
 import { useRouter } from 'vue-router'
 
@@ -18,6 +18,13 @@ function formatDate(d) {
   const day = String(d.getDate()).padStart(2, '0')
   return `${y}-${m}-${day}`
 }
+
+// 試合日付が変わったら自動でシーズン（年）を更新
+watch(gameDate, (val) => {
+  if (val) {
+    season.value = parseInt(val.split('-')[0])
+  }
+})
 
 async function submit() {
   if (!gameDate.value || !opponent.value) {
@@ -92,16 +99,12 @@ gameDate.value = formatDate(new Date())
               class="btn flex-1"
               :class="batFirst === 'our' ? 'btn-primary' : 'btn-outline'"
               @click="batFirst = 'our'"
-            >
-              先攻
-            </button>
+            >先攻</button>
             <button
               class="btn flex-1"
               :class="batFirst === 'opponent' ? 'btn-primary' : 'btn-outline'"
               @click="batFirst = 'opponent'"
-            >
-              後攻
-            </button>
+            >後攻</button>
           </div>
         </div>
 

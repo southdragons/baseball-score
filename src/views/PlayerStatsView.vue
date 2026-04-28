@@ -94,8 +94,10 @@ const positions = {
 
 function getCircleColor(d) {
   if (d.total === 0) return 'transparent'
-  if (d.hit > 0) return '#4ade80'
-  return '#fbbf24'
+  const hitRatio = d.hit / d.total
+  if (hitRatio >= 0.67) return '#4ade80'
+  if (hitRatio >= 0.33) return '#fbbf24'
+  return '#f87171'
 }
 
 function getCircleRadius(d) {
@@ -210,17 +212,16 @@ onMounted(fetchData)
       <div class="card bg-base-100 shadow border border-gray-200">
         <div class="card-body">
           <h2 class="font-bold text-lg mb-1">🗺️ 打球分布</h2>
+          <p class="text-xs text-gray-500 mb-1">円の大きさ＝打球割合　数字＝安打率</p>
           <p class="text-xs text-gray-400 mb-3">
-            <span class="inline-block w-3 h-3 rounded-full bg-green-400 mr-1"></span>安打あり
-            <span class="inline-block w-3 h-3 rounded-full bg-yellow-400 ml-3 mr-1"></span>凡打のみ
+            <span class="inline-block w-3 h-3 rounded-full bg-green-400 mr-1"></span>得意（67%以上）
+            <span class="inline-block w-3 h-3 rounded-full bg-yellow-400 ml-3 mr-1"></span>普通（33〜66%）
+            <span class="inline-block w-3 h-3 rounded-full bg-red-400 ml-3 mr-1"></span>苦手（32%以下）
           </p>
 
           <div class="flex justify-center">
             <svg viewBox="0 0 200 200" class="w-72 h-72">
-              <!-- 背景画像 -->
               <image href="/field.png" x="0" y="0" width="200" height="200" />
-
-              <!-- 各守備位置の打球円 -->
               <g v-for="(dir, name) in positions" :key="name">
                 <circle
                   v-if="hitData[name]?.total > 0"
@@ -230,7 +231,6 @@ onMounted(fetchData)
                   :fill="getCircleColor(hitData[name])"
                   fill-opacity="0.75"
                 />
-                <!-- パーセンテージのみ表示 -->
                 <text
                   v-if="hitData[name]?.total > 0"
                   :x="dir.x"
@@ -240,7 +240,7 @@ onMounted(fetchData)
                   font-size="9"
                   font-weight="bold"
                   fill="#1f2937"
-                >{{ (hitData[name].total / totalBalls * 100).toFixed(1) }}%</text>
+                >{{ (hitData[name].hit / hitData[name].total * 100).toFixed(1) }}%</text>
               </g>
             </svg>
           </div>
@@ -256,7 +256,7 @@ onMounted(fetchData)
               <tbody>
                 <tr>
                   <td v-for="d in hitDirections" :key="d" class="font-bold text-xs">
-                    {{ hitData[d]?.total ? (hitData[d].total / totalBalls * 100).toFixed(1) + '%' : '-' }}
+                    {{ hitData[d]?.total ? (hitData[d].hit / hitData[d].total * 100).toFixed(1) + '%' : '-' }}
                   </td>
                 </tr>
               </tbody>
