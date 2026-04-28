@@ -36,8 +36,6 @@ const stats = computed(() => {
   const walks = atBats.value.filter(ab => ab.result.split('(')[0] === '四球').length
   const hbp = atBats.value.filter(ab => ab.result.split('(')[0] === '死球').length
   const sf = atBats.value.filter(ab => ab.result.split('(')[0] === '犠飛').length
-
-  // 出塁率 = (安打 + 四球 + 死球) ÷ (打数 + 四球 + 死球 + 犠飛)
   const obpDenominator = ab + walks + hbp + sf
   const obp = obpDenominator > 0 ? ((hits + walks + hbp) / obpDenominator).toFixed(3) : '---'
 
@@ -49,6 +47,62 @@ const stats = computed(() => {
     obp
   }
 })
+
+const hitDirections = ['投', '捕', '一', '二', '三', '遊', '左', '中', '右']
+
+const hitData = computed(() => {
+  const hitResults = ['ヒット', '2塁打', '3塁打', 'ホームラン']
+
+  const data = {}
+  hitDirections.forEach(d => {
+    data[d] = { hit: 0, out: 0, total: 0 }
+  })
+
+  atBats.value.forEach(ab => {
+    const match = ab.result.match(/^(.+?)\((.+)\)$/)
+    if (!match) return
+    const result = match[1]
+    const dir = match[2]
+    if (!data[dir]) return
+
+    data[dir].total++
+    if (hitResults.includes(result)) {
+      data[dir].hit++
+    } else {
+      data[dir].out++
+    }
+  })
+
+  return data
+})
+
+const totalBalls = computed(() => {
+  return Object.values(hitData.value).reduce((s, d) => s + d.total, 0)
+})
+
+const positions = {
+  '中': { x: 100, y: 35 },
+  '左': { x: 48,  y: 62 },
+  '右': { x: 152, y: 62 },
+  '遊': { x: 78,  y: 90 },
+  '二': { x: 122, y: 90 },
+  '三': { x: 58,  y: 118 },
+  '一': { x: 142, y: 118 },
+  '投': { x: 100, y: 108 },
+  '捕': { x: 100, y: 145 },
+}
+
+function getCircleColor(d) {
+  if (d.total === 0) return 'transparent'
+  if (d.hit > 0) return '#4ade80'
+  return '#fbbf24'
+}
+
+function getCircleRadius(d) {
+  if (d.total === 0) return 0
+  const ratio = d.total / totalBalls.value
+  return Math.max(8, ratio * 50)
+}
 
 const gameStats = computed(() => {
   const grouped = {}
@@ -95,8 +149,6 @@ onMounted(fetchData)
       <div class="card bg-base-100 shadow border border-gray-200">
         <div class="card-body">
           <h2 class="font-bold text-lg mb-3">📊 通算成績</h2>
-
-          <!-- 主要スタッツ -->
           <div class="grid grid-cols-4 gap-2 text-center mb-2">
             <div class="bg-gray-50 rounded-lg p-2">
               <div class="text-2xl font-bold text-primary">{{ stats.avg }}</div>
@@ -115,8 +167,6 @@ onMounted(fetchData)
               <div class="text-xs text-gray-500">打点</div>
             </div>
           </div>
-
-          <!-- サブスタッツ -->
           <div class="grid grid-cols-4 gap-2 text-center mb-2">
             <div class="bg-gray-50 rounded-lg p-2">
               <div class="text-2xl font-bold text-warning">{{ stats.hr }}</div>
@@ -135,8 +185,6 @@ onMounted(fetchData)
               <div class="text-xs text-gray-500">四死球</div>
             </div>
           </div>
-
-          <!-- 詳細スタッツ -->
           <div class="grid grid-cols-4 gap-2 text-center">
             <div class="bg-gray-50 rounded-lg p-2">
               <div class="text-2xl font-bold">{{ stats.pa }}</div>
@@ -154,6 +202,65 @@ onMounted(fetchData)
               <div class="text-2xl font-bold">{{ stats.triples }}</div>
               <div class="text-xs text-gray-500">三塁打</div>
             </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 打球分布 -->
+      <div class="card bg-base-100 shadow border border-gray-200">
+        <div class="card-body">
+          <h2 class="font-bold text-lg mb-1">🗺️ 打球分布</h2>
+          <p class="text-xs text-gray-400 mb-3">
+            <span class="inline-block w-3 h-3 rounded-full bg-green-400 mr-1"></span>安打あり
+            <span class="inline-block w-3 h-3 rounded-full bg-yellow-400 ml-3 mr-1"></span>凡打のみ
+          </p>
+
+          <div class="flex justify-center">
+            <svg viewBox="0 0 200 200" class="w-72 h-72">
+              <!-- 背景画像 -->
+              <image href="/field.png" x="0" y="0" width="200" height="200" />
+
+              <!-- 各守備位置の打球円 -->
+              <g v-for="(dir, name) in positions" :key="name">
+                <circle
+                  v-if="hitData[name]?.total > 0"
+                  :cx="dir.x"
+                  :cy="dir.y"
+                  :r="getCircleRadius(hitData[name])"
+                  :fill="getCircleColor(hitData[name])"
+                  fill-opacity="0.75"
+                />
+                <!-- パーセンテージのみ表示 -->
+                <text
+                  v-if="hitData[name]?.total > 0"
+                  :x="dir.x"
+                  :y="dir.y"
+                  text-anchor="middle"
+                  dominant-baseline="middle"
+                  font-size="9"
+                  font-weight="bold"
+                  fill="#1f2937"
+                >{{ (hitData[name].total / totalBalls * 100).toFixed(1) }}%</text>
+              </g>
+            </svg>
+          </div>
+
+          <!-- 方向別集計表 -->
+          <div class="mt-2 overflow-x-auto">
+            <table class="table table-xs text-center w-full">
+              <thead>
+                <tr>
+                  <th v-for="d in hitDirections" :key="d">{{ d }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td v-for="d in hitDirections" :key="d" class="font-bold text-xs">
+                    {{ hitData[d]?.total ? (hitData[d].total / totalBalls * 100).toFixed(1) + '%' : '-' }}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </div>
       </div>
