@@ -153,55 +153,55 @@ onMounted(fetchData)
           <h2 class="font-bold text-lg mb-3">📊 通算成績</h2>
           <div class="grid grid-cols-4 gap-2 text-center mb-2">
             <div class="bg-gray-50 rounded-lg p-2">
-              <div class="text-2xl font-bold text-primary">{{ stats.avg }}</div>
+              <div class="text-lg font-bold text-primary">{{ stats.avg }}</div>
               <div class="text-xs text-gray-500">打率</div>
             </div>
             <div class="bg-gray-50 rounded-lg p-2">
-              <div class="text-2xl font-bold text-success">{{ stats.obp }}</div>
+              <div class="text-lg font-bold text-success">{{ stats.obp }}</div>
               <div class="text-xs text-gray-500">出塁率</div>
             </div>
             <div class="bg-gray-50 rounded-lg p-2">
-              <div class="text-2xl font-bold text-success">{{ stats.hits }}</div>
+              <div class="text-lg font-bold text-success">{{ stats.hits }}</div>
               <div class="text-xs text-gray-500">安打</div>
             </div>
             <div class="bg-gray-50 rounded-lg p-2">
-              <div class="text-2xl font-bold text-error">{{ stats.rbi }}</div>
+              <div class="text-lg font-bold text-error">{{ stats.rbi }}</div>
               <div class="text-xs text-gray-500">打点</div>
             </div>
           </div>
           <div class="grid grid-cols-4 gap-2 text-center mb-2">
             <div class="bg-gray-50 rounded-lg p-2">
-              <div class="text-2xl font-bold text-warning">{{ stats.hr }}</div>
+              <div class="text-lg font-bold text-warning">{{ stats.hr }}</div>
               <div class="text-xs text-gray-500">本塁打</div>
             </div>
             <div class="bg-gray-50 rounded-lg p-2">
-              <div class="text-2xl font-bold text-info">{{ stats.runs }}</div>
+              <div class="text-lg font-bold text-info">{{ stats.runs }}</div>
               <div class="text-xs text-gray-500">得点</div>
             </div>
             <div class="bg-gray-50 rounded-lg p-2">
-              <div class="text-2xl font-bold text-info">{{ stats.steals }}</div>
+              <div class="text-lg font-bold text-info">{{ stats.steals }}</div>
               <div class="text-xs text-gray-500">盗塁</div>
             </div>
             <div class="bg-gray-50 rounded-lg p-2">
-              <div class="text-2xl font-bold">{{ stats.walks }}</div>
+              <div class="text-lg font-bold">{{ stats.walks }}</div>
               <div class="text-xs text-gray-500">四死球</div>
             </div>
           </div>
           <div class="grid grid-cols-4 gap-2 text-center">
             <div class="bg-gray-50 rounded-lg p-2">
-              <div class="text-2xl font-bold">{{ stats.pa }}</div>
+              <div class="text-lg font-bold">{{ stats.pa }}</div>
               <div class="text-xs text-gray-500">打席</div>
             </div>
             <div class="bg-gray-50 rounded-lg p-2">
-              <div class="text-2xl font-bold">{{ stats.ab }}</div>
+              <div class="text-lg font-bold">{{ stats.ab }}</div>
               <div class="text-xs text-gray-500">打数</div>
             </div>
             <div class="bg-gray-50 rounded-lg p-2">
-              <div class="text-2xl font-bold">{{ stats.doubles }}</div>
+              <div class="text-lg font-bold">{{ stats.doubles }}</div>
               <div class="text-xs text-gray-500">二塁打</div>
             </div>
             <div class="bg-gray-50 rounded-lg p-2">
-              <div class="text-2xl font-bold">{{ stats.triples }}</div>
+              <div class="text-lg font-bold">{{ stats.triples }}</div>
               <div class="text-xs text-gray-500">三塁打</div>
             </div>
           </div>
@@ -213,11 +213,17 @@ onMounted(fetchData)
         <div class="card-body">
           <h2 class="font-bold text-lg mb-1">🗺️ 打球分布</h2>
           <p class="text-xs text-gray-500 mb-1">円の大きさ＝打球割合　数字＝安打率</p>
-          <p class="text-xs text-gray-400 mb-3">
-            <span class="inline-block w-3 h-3 rounded-full bg-green-400 mr-1"></span>得意（67%以上）
-            <span class="inline-block w-3 h-3 rounded-full bg-yellow-400 ml-3 mr-1"></span>普通（33〜66%）
-            <span class="inline-block w-3 h-3 rounded-full bg-red-400 ml-3 mr-1"></span>苦手（32%以下）
-          </p>
+          <div class="flex items-center gap-3 mb-3 flex-wrap">
+            <span class="flex items-center gap-1 text-xs text-gray-400">
+              <span class="inline-block w-3 h-3 rounded-full bg-green-400"></span>得意（67%以上）
+            </span>
+            <span class="flex items-center gap-1 text-xs text-gray-400">
+              <span class="inline-block w-3 h-3 rounded-full bg-yellow-400"></span>普通（33〜66%）
+            </span>
+            <span class="flex items-center gap-1 text-xs text-gray-400">
+              <span class="inline-block w-3 h-3 rounded-full bg-red-400"></span>苦手（32%以下）
+            </span>
+          </div>
 
           <div class="flex justify-center">
             <svg viewBox="0 0 200 200" class="w-72 h-72">
