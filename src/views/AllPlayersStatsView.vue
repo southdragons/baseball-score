@@ -39,10 +39,7 @@ const playerStats = computed(() => {
       name: p.name,
       grade: p.grade,
       player_code: p.player_code,
-      ab,
-      hits,
-      hr,
-      rbi,
+      ab, hits, hr, rbi,
       steals: playerSteals.length,
       avgStr: ab > 0 ? (hits / ab).toFixed(3) : '---'
     }
@@ -82,31 +79,33 @@ onMounted(fetchData)
         class="card bg-base-100 shadow border border-gray-200 cursor-pointer hover:shadow-md transition active:scale-95"
       >
         <div class="card-body py-3">
-          <div class="flex items-center gap-3">
-            <div class="badge badge-outline font-mono">{{ p.player_code }}</div>
-            <div class="flex-1">
-              <div class="font-bold">{{ p.name }}</div>
-              <div class="text-xs text-gray-500">{{ p.grade }}年生</div>
+          <!-- 選手名・コード -->
+          <div class="flex items-center gap-2 mb-2">
+            <div class="badge badge-outline font-mono text-xs">{{ p.player_code }}</div>
+            <div>
+              <span class="font-bold">{{ p.name }}</span>
+              <span class="text-xs text-gray-500 ml-2">{{ p.grade }}年生</span>
             </div>
-            <div class="grid grid-cols-4 gap-2 text-center">
-              <div>
-                <div class="font-bold text-primary text-sm">{{ p.avgStr }}</div>
-                <div class="text-xs text-gray-400">打率</div>
-              </div>
-              <div>
-                <div class="font-bold text-success text-sm">{{ p.hits }}</div>
-                <div class="text-xs text-gray-400">安打</div>
-              </div>
-              <div>
-                <div class="font-bold text-warning text-sm">{{ p.hr }}</div>
-                <div class="text-xs text-gray-400">本塁打</div>
-              </div>
-              <div>
-                <div class="font-bold text-info text-sm">{{ p.steals }}</div>
-                <div class="text-xs text-gray-400">盗塁</div>
-              </div>
+            <div class="ml-auto text-gray-400">›</div>
+          </div>
+          <!-- 成績 -->
+          <div class="grid grid-cols-4 gap-1 text-center">
+            <div class="bg-gray-50 rounded p-1">
+              <div class="font-bold text-primary text-sm">{{ p.avgStr }}</div>
+              <div class="text-xs text-gray-400">打率</div>
             </div>
-            <div class="text-gray-400">›</div>
+            <div class="bg-gray-50 rounded p-1">
+              <div class="font-bold text-success text-sm">{{ p.hits }}</div>
+              <div class="text-xs text-gray-400">安打</div>
+            </div>
+            <div class="bg-gray-50 rounded p-1">
+              <div class="font-bold text-warning text-sm">{{ p.hr }}</div>
+              <div class="text-xs text-gray-400">本塁打</div>
+            </div>
+            <div class="bg-gray-50 rounded p-1">
+              <div class="font-bold text-info text-sm">{{ p.steals }}</div>
+              <div class="text-xs text-gray-400">盗塁</div>
+            </div>
           </div>
         </div>
       </div>
