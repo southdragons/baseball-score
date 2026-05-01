@@ -78,7 +78,7 @@ gameDate.value = formatDate(new Date())
           <label class="text-sm font-bold mb-1 block">対戦相手</label>
           <input
             v-model="opponent"
-            placeholder="例：東山ファイターズ"
+            placeholder="例：ジュニアベースボールクラブ"
             class="input w-full border-2 border-gray-400 focus:border-primary"
           />
         </div>

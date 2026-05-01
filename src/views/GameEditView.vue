@@ -28,11 +28,24 @@ const rbi = ref(0)
 const stealPlayer = ref('')
 const runPlayer = ref('')
 
+// 打席記録編集
 const showEditAtBatModal = ref(false)
 const editAtBat = ref(null)
 const editAtBatResult = ref('')
 const editAtBatDirection = ref('')
 const editAtBatRbi = ref(0)
+
+// 盗塁記録編集
+const showEditStealModal = ref(false)
+const editSteal = ref(null)
+const editStealPlayer = ref('')
+const editStealInning = ref(1)
+
+// 得点記録編集
+const showEditRunModal = ref(false)
+const editRun = ref(null)
+const editRunPlayer = ref('')
+const editRunInning = ref(1)
 
 const results = [
   { label: '安打', value: 'ヒット', class: 'btn-success', needsDirection: true },
@@ -79,8 +92,8 @@ async function fetchData() {
     supabase.from('orders').select('*, players(name, player_code)').eq('game_id', route.params.id).order('batting_order'),
     supabase.from('innings').select('*').eq('game_id', route.params.id).order('inning'),
     supabase.from('at_bats').select('*, players(name)').eq('game_id', route.params.id).order('created_at', { ascending: true }),
-    supabase.from('steals').select('*, players(name)').eq('game_id', route.params.id).order('created_at', { ascending: false }),
-    supabase.from('runs').select('*, players(name)').eq('game_id', route.params.id).order('created_at', { ascending: false }),
+    supabase.from('steals').select('*, players(name)').eq('game_id', route.params.id).order('inning', { ascending: true }),
+    supabase.from('runs').select('*, players(name)').eq('game_id', route.params.id).order('inning', { ascending: true }),
     supabase.from('players').select('*').eq('status', 'active').order('player_code')
   ])
 
@@ -236,6 +249,34 @@ async function addSteal(playerId) {
   fetchData()
 }
 
+function openEditSteal(s) {
+  editSteal.value = s
+  editStealPlayer.value = s.player_id
+  editStealInning.value = s.inning
+  showEditStealModal.value = true
+}
+
+async function saveEditSteal() {
+  const { error } = await supabase
+    .from('steals')
+    .update({
+      player_id: editStealPlayer.value,
+      inning: editStealInning.value
+    })
+    .eq('id', editSteal.value.id)
+  if (!error) {
+    toast.value = '更新しました'
+    setTimeout(() => toast.value = '', 3000)
+    showEditStealModal.value = false
+    fetchData()
+  }
+}
+
+async function deleteSteal(id) {
+  await supabase.from('steals').delete().eq('id', id)
+  fetchData()
+}
+
 async function addRun(playerId) {
   await supabase.from('runs').insert({
     game_id: route.params.id,
@@ -244,6 +285,34 @@ async function addRun(playerId) {
   })
   toast.value = '得点記録しました'
   setTimeout(() => toast.value = '', 2000)
+  fetchData()
+}
+
+function openEditRun(r) {
+  editRun.value = r
+  editRunPlayer.value = r.player_id
+  editRunInning.value = r.inning
+  showEditRunModal.value = true
+}
+
+async function saveEditRun() {
+  const { error } = await supabase
+    .from('runs')
+    .update({
+      player_id: editRunPlayer.value,
+      inning: editRunInning.value
+    })
+    .eq('id', editRun.value.id)
+  if (!error) {
+    toast.value = '更新しました'
+    setTimeout(() => toast.value = '', 3000)
+    showEditRunModal.value = false
+    fetchData()
+  }
+}
+
+async function deleteRun(id) {
+  await supabase.from('runs').delete().eq('id', id)
   fetchData()
 }
 
@@ -456,7 +525,7 @@ onMounted(fetchData)
       <div class="card bg-base-100 shadow border border-gray-200">
         <div class="card-body">
           <h2 class="font-bold mb-3">盗塁記録</h2>
-          <div class="flex gap-2">
+          <div class="flex gap-2 mb-3">
             <select v-model="stealPlayer" class="select select-bordered flex-1">
               <option value="">選手を選択</option>
               <optgroup label="オーダー">
@@ -476,6 +545,23 @@ onMounted(fetchData)
               @click="addSteal(stealPlayer); stealPlayer = ''"
             >登録</button>
           </div>
+          <!-- 盗塁一覧 -->
+          <div v-if="steals.length">
+            <div
+              v-for="s in steals"
+              :key="s.id"
+              class="flex items-center justify-between py-2 border-b last:border-0"
+            >
+              <div>
+                <span class="text-sm font-bold">{{ s.players?.name }}</span>
+                <span class="text-xs text-gray-500 ml-2">{{ s.inning }}回</span>
+              </div>
+              <div class="flex gap-2">
+                <button class="btn btn-xs btn-outline btn-info" @click="openEditSteal(s)">編集</button>
+                <button class="btn btn-xs btn-outline btn-error" @click="deleteSteal(s.id)">削除</button>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -483,7 +569,7 @@ onMounted(fetchData)
       <div class="card bg-base-100 shadow border border-gray-200">
         <div class="card-body">
           <h2 class="font-bold mb-3">得点記録</h2>
-          <div class="flex gap-2">
+          <div class="flex gap-2 mb-3">
             <select v-model="runPlayer" class="select select-bordered flex-1">
               <option value="">選手を選択</option>
               <optgroup label="オーダー">
@@ -503,15 +589,21 @@ onMounted(fetchData)
               @click="addRun(runPlayer); runPlayer = ''"
             >登録</button>
           </div>
-          <!-- 得点履歴 -->
-          <div v-if="runs.length" class="mt-3">
+          <!-- 得点一覧 -->
+          <div v-if="runs.length">
             <div
-              v-for="r in runs.slice(0, 5)"
+              v-for="r in runs"
               :key="r.id"
-              class="flex items-center justify-between py-1 border-b last:border-0"
+              class="flex items-center justify-between py-2 border-b last:border-0"
             >
-              <span class="text-sm font-bold">{{ r.players?.name }}</span>
-              <span class="text-xs text-gray-500">{{ r.inning }}回 🏃得点</span>
+              <div>
+                <span class="text-sm font-bold">{{ r.players?.name }}</span>
+                <span class="text-xs text-gray-500 ml-2">{{ r.inning }}回</span>
+              </div>
+              <div class="flex gap-2">
+                <button class="btn btn-xs btn-outline btn-info" @click="openEditRun(r)">編集</button>
+                <button class="btn btn-xs btn-outline btn-error" @click="deleteRun(r.id)">削除</button>
+              </div>
             </div>
           </div>
         </div>
@@ -590,6 +682,74 @@ onMounted(fetchData)
         <div class="flex gap-2">
           <button class="btn btn-outline flex-1" @click="showEditAtBatModal = false">キャンセル</button>
           <button class="btn btn-primary flex-1" @click="saveEditAtBat">保存</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 盗塁記録編集モーダル -->
+    <div v-if="showEditStealModal" class="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+      <div class="bg-white p-6 rounded-xl w-80">
+        <h2 class="font-bold text-lg mb-4">盗塁記録を編集</h2>
+        <div class="flex flex-col gap-3">
+          <div>
+            <label class="text-sm font-bold mb-1 block">選手</label>
+            <select v-model="editStealPlayer" class="select select-bordered w-full">
+              <optgroup label="オーダー">
+                <option v-for="o in orders" :key="o.player_id" :value="o.player_id">
+                  {{ o.batting_order }}番 {{ o.players?.name }}
+                </option>
+              </optgroup>
+              <optgroup label="代走・その他" v-if="subPlayers.length">
+                <option v-for="p in subPlayers" :key="p.id" :value="p.id">
+                  {{ p.player_code }} {{ p.name }}（{{ p.grade }}年）
+                </option>
+              </optgroup>
+            </select>
+          </div>
+          <div>
+            <label class="text-sm font-bold mb-1 block">イニング</label>
+            <select v-model="editStealInning" class="select select-bordered w-full">
+              <option v-for="n in 7" :key="n" :value="n">{{ n }}回</option>
+            </select>
+          </div>
+        </div>
+        <div class="flex gap-2 mt-4">
+          <button class="btn btn-outline flex-1" @click="showEditStealModal = false">キャンセル</button>
+          <button class="btn btn-primary flex-1" @click="saveEditSteal">保存</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 得点記録編集モーダル -->
+    <div v-if="showEditRunModal" class="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+      <div class="bg-white p-6 rounded-xl w-80">
+        <h2 class="font-bold text-lg mb-4">得点記録を編集</h2>
+        <div class="flex flex-col gap-3">
+          <div>
+            <label class="text-sm font-bold mb-1 block">選手</label>
+            <select v-model="editRunPlayer" class="select select-bordered w-full">
+              <optgroup label="オーダー">
+                <option v-for="o in orders" :key="o.player_id" :value="o.player_id">
+                  {{ o.batting_order }}番 {{ o.players?.name }}
+                </option>
+              </optgroup>
+              <optgroup label="代走・その他" v-if="subPlayers.length">
+                <option v-for="p in subPlayers" :key="p.id" :value="p.id">
+                  {{ p.player_code }} {{ p.name }}（{{ p.grade }}年）
+                </option>
+              </optgroup>
+            </select>
+          </div>
+          <div>
+            <label class="text-sm font-bold mb-1 block">イニング</label>
+            <select v-model="editRunInning" class="select select-bordered w-full">
+              <option v-for="n in 7" :key="n" :value="n">{{ n }}回</option>
+            </select>
+          </div>
+        </div>
+        <div class="flex gap-2 mt-4">
+          <button class="btn btn-outline flex-1" @click="showEditRunModal = false">キャンセル</button>
+          <button class="btn btn-primary flex-1" @click="saveEditRun">保存</button>
         </div>
       </div>
     </div>
