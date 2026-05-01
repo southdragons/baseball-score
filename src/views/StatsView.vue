@@ -40,6 +40,7 @@ function submitPassword() {
 }
 
 async function fetchData() {
+  isAuthenticated.value = true
   loading.value = true
   const [playersRes, gamesRes, atBatsRes, stealsRes] = await Promise.all([
     supabase.from('players').select('*').eq('status', 'active').order('player_code'),
@@ -94,7 +95,8 @@ const stealRanking = computed(() => [...playerStats.value].filter(p => p.steals 
 const hitsRanking = computed(() => [...playerStats.value].filter(p => p.hits > 0).sort((a, b) => b.hits - a.hits).slice(0, 3))
 
 watch(currentSeason, fetchData)
-onMounted(checkAuth)
+//onMounted(checkAuth)
+onMounted(fetchData)
 </script>
 
 <template>

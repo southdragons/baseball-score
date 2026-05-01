@@ -7,30 +7,13 @@ const router = useRouter()
 const games = ref([])
 const scores = ref({})
 const loading = ref(true)
-const showPasswordModal = ref(false)
-const passwordInput = ref('')
-const passwordError = ref(false)
-const ADMIN_PASSWORD = 'admin'
 
 function openAdmin() {
-  const saved = localStorage.getItem('adminAuth')
-  if (saved === ADMIN_PASSWORD) {
-    router.push('/admin')
-  } else {
-    showPasswordModal.value = true
-    passwordInput.value = ''
-    passwordError.value = false
-  }
+  router.push('/admin')
 }
 
-function submitPassword() {
-  if (passwordInput.value === ADMIN_PASSWORD) {
-    localStorage.setItem('adminAuth', ADMIN_PASSWORD)
-    showPasswordModal.value = false
-    router.push('/admin')
-  } else {
-    passwordError.value = true
-  }
+function openStats() {
+  router.push('/stats')
 }
 
 function formatDate(d) {
@@ -102,34 +85,15 @@ onMounted(fetchGames)
     </div>
 
     <div class="grid grid-cols-3 gap-2 mb-4">
-      <router-link to="/stats" class="btn btn-sm btn-warning opacity-90 hover:opacity-100">
+      <button class="btn btn-sm btn-warning opacity-90 hover:opacity-100" @click="openStats">
         🏆 ランキング
-      </router-link>
+      </button>
       <router-link to="/past-games" class="btn btn-sm btn-outline opacity-90 hover:opacity-100">
         📅 過去の試合
       </router-link>
       <button class="btn btn-sm btn-outline" @click="openAdmin">
         ⚙️ 試合登録
       </button>
-    </div>
-
-    <!-- パスワードモーダル -->
-    <div v-if="showPasswordModal" class="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
-      <div class="bg-white p-6 rounded-xl w-72">
-        <h2 class="font-bold text-lg mb-4">🔐 関係者認証</h2>
-        <input
-          v-model="passwordInput"
-          type="password"
-          placeholder="パスワードを入力"
-          class="input w-full border-2 border-gray-400 mb-2"
-          @keyup.enter="submitPassword"
-        />
-        <div v-if="passwordError" class="text-error text-sm mb-2">パスワードが違います</div>
-        <div class="flex gap-2">
-          <button class="btn btn-outline flex-1" @click="showPasswordModal = false">キャンセル</button>
-          <button class="btn btn-primary flex-1" @click="submitPassword">認証</button>
-        </div>
-      </div>
     </div>
 
     <div v-if="loading" class="text-center py-10">
