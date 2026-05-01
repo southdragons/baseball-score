@@ -119,7 +119,7 @@ const gameStats = computed(() => {
     }
     grouped[key].atBats.push(ab)
   })
-  return Object.values(grouped)
+  return Object.values(grouped).slice(0, 1)
 })
 
 onMounted(fetchData)
@@ -274,7 +274,7 @@ onMounted(fetchData)
       <!-- 試合別成績 -->
       <div class="card bg-base-100 shadow border border-gray-200">
         <div class="card-body">
-          <h2 class="font-bold text-lg mb-3">📅 試合別成績</h2>
+          <h2 class="font-bold text-lg mb-3">📅 直近の試合成績</h2>
           <div v-if="!gameStats.length" class="text-gray-500 text-sm">データなし</div>
           <div v-for="(g, i) in gameStats" :key="i" class="mb-3 pb-3 border-b last:border-0">
             <div class="flex justify-between items-center mb-2">

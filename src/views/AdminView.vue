@@ -67,7 +67,7 @@ onMounted(fetchGames)
       <h1 class="text-xl font-bold">⚙️ 管理者メニュー</h1>
     </div>
 
-    <router-link to="/admin/games/add" class="btn btn-primary w-full mb-4">
+    <router-link to="/admin/games/add" class="btn btn-primary w-full mb-4 text-white">
       ＋ 試合を追加
     </router-link>
 
