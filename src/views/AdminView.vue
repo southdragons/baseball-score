@@ -64,7 +64,7 @@ onMounted(fetchGames)
   <div class="max-w-md mx-auto px-4 py-6">
     <div class="flex items-center mb-6 gap-2">
       <router-link to="/" class="btn btn-sm btn-ghost">←</router-link>
-      <h1 class="text-xl font-bold">⚙️ 関係者メニュー</h1>
+      <h1 class="text-xl font-bold">⚙️ 試合登録</h1>
     </div>
 
     <router-link to="/admin/games/add" class="btn btn-primary w-full mb-4 text-white">
