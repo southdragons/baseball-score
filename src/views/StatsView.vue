@@ -114,8 +114,8 @@ onMounted(checkAuth)
         />
         <div v-if="passwordError" class="text-error text-sm mb-2">パスワードが違います</div>
         <div class="flex gap-2">
-          <button class="btn btn-outline flex-1" @click="router.push('/')">戻る</button>
-          <button class="btn btn-primary flex-1 text-white" @click="submitPassword">認証</button>
+          <button class="btn btn-outline flex-1" @click="router.push('/')">キャンセル</button>
+          <button class="btn btn-primary flex-1" style="color: #000000;" @click="submitPassword">認証</button>
         </div>
       </div>
     </div>
