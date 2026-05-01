@@ -103,20 +103,20 @@ onMounted(fetchGames)
 
     <div class="grid grid-cols-3 gap-2 mb-4">
       <router-link to="/stats" class="btn btn-sm btn-warning opacity-90 hover:opacity-100">
-        🏆 成績ランキング
+        🏆 ランキング
       </router-link>
       <router-link to="/past-games" class="btn btn-sm btn-outline opacity-90 hover:opacity-100">
         📅 過去の試合
       </router-link>
       <button class="btn btn-sm btn-outline" @click="openAdmin">
-        ⚙️ 管理者
+        ⚙️ 試合登録
       </button>
     </div>
 
     <!-- パスワードモーダル -->
     <div v-if="showPasswordModal" class="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
       <div class="bg-white p-6 rounded-xl w-72">
-        <h2 class="font-bold text-lg mb-4">🔐 管理者認証</h2>
+        <h2 class="font-bold text-lg mb-4">🔐 関係者認証</h2>
         <input
           v-model="passwordInput"
           type="password"
@@ -127,7 +127,7 @@ onMounted(fetchGames)
         <div v-if="passwordError" class="text-error text-sm mb-2">パスワードが違います</div>
         <div class="flex gap-2">
           <button class="btn btn-outline flex-1" @click="showPasswordModal = false">キャンセル</button>
-          <button class="btn btn-primary flex-1" @click="submitPassword">入力</button>
+          <button class="btn btn-primary flex-1" @click="submitPassword">認証</button>
         </div>
       </div>
     </div>
